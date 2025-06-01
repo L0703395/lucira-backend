@@ -1,70 +1,52 @@
-// server.js
-
 const express = require('express');
-const app = express();
-const PORT = process.env.PORT || 3000;
 const cors = require('cors');
 
-// Middleware: Enable JSON and CORS
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Enable JSON parsing
 app.use(express.json());
 
+// Enable CORS for your GitHub Pages frontend
 app.use(cors({
-  origin: 'https://l0703395.github.io', // GitHub Pages frontend
+  origin: 'https://l0703395.github.io', // Replace with your actual frontend domain if different
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type']
 }));
 
-// Middleware: Simulate ULI Logic Filter
+// Middleware: Simulate ULI logic
 app.use((req, res, next) => {
-  console.log(`🔐 ULI Middleware: Validating ${req.method} ${req.url}`);
-  // Future: Vault logging, auth checks, etc.
+  console.log(`[ULI Middleware] ${req.method} request to ${req.path}`);
   next();
 });
 
-// ✅ Root Route (health check)
-app.get('/', (req, res) => {
-  res.send('Lucira backend is online and ready.');
-});
-
-// ✅ RIE Endpoint (Research)
+// Research Engine (RIE)
 app.post('/api/rie/query', (req, res) => {
-  const { query } = req.body;
-  if (!query) {
-    return res.status(400).json({ error: 'Missing research query.' });
-  }
-  console.log(`📥 RIE Query Received: ${query}`);
-  res.json({ status: `RIE received your research query: "${query}"` });
+  const query = req.body.query || "No query provided.";
+  res.json({ status: "RIE received your research query.", query });
 });
 
-// ✅ MIE Endpoint (Medical)
+// Medical Engine (MIE)
 app.post('/api/mie/report', (req, res) => {
-  const { report } = req.body;
-  console.log(`📥 MIE Report Received: ${report}`);
-  res.json({ status: 'MIE received the medical report.' });
+  res.json({ status: "MIE received the medical report." });
 });
 
-// ✅ LIE Endpoint (Legal)
+// Legal Engine (LIE)
 app.post('/api/lie/notarize', (req, res) => {
-  const { document } = req.body;
-  console.log(`📥 LIE Notarization Request: ${document}`);
-  res.json({ status: 'LIE received your notarization request.' });
+  res.json({ status: "LIE received your notarization request." });
 });
 
-// ✅ DAFE Endpoint (Finance)
+// Finance Engine (DAFE)
 app.post('/api/dafe/transaction', (req, res) => {
-  const { transaction } = req.body;
-  console.log(`📥 DAFE Transaction Received: ${transaction}`);
-  res.json({ status: 'DAFE processed your transaction.' });
+  res.json({ status: "DAFE processed your transaction." });
 });
 
-// ✅ TAXE Endpoint (Taxes)
+// Tax Engine (TAXE)
 app.post('/api/taxe/submit', (req, res) => {
-  const { form } = req.body;
-  console.log(`📥 TAXE Submission Received: ${form}`);
-  res.json({ status: 'TAXE received your tax submission.' });
+  res.json({ status: "TAXE received your tax submission." });
 });
 
-// ✅ Start Server
+// Start the server
 app.listen(PORT, () => {
-  console.log(`🚀 Lucira Backend is running on port ${PORT}`);
+  console.log(`✅ Lucira API running on port ${PORT}`);
 });
