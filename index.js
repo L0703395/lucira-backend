@@ -1,8 +1,16 @@
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
+const cors = require('cors');
+
 
 app.use(express.json());
+
+app.use(cors({
+  origin: 'https://l0703395.github.io', // your GitHub Pages domain
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
+}));
 
 // Middleware: Simulate ULI Logic Filter
 app.use((req, res, next) => {
