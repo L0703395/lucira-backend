@@ -169,6 +169,22 @@ app.post("/v1/plugins/propose", requireOwnerAuth, (req, res) => {
     auto_faq: faqResponse
   });
 });
+// =========================
+// Plugin moderation (approve / reject)
+// =========================
+
+// helper: find proposal by id
+function findProposal(id) {
+  return pluginProposals.find(p => p.id === id);
+}
+
+// Approve
+app.post("/v1/plugins/approve", requireOwnerAuth, (req, res) => {
+  const { proposal_id, note } = req.body || {};
+  const p = findProposal(proposal_id);
+  if (!p) return res.status(404).json({ error: "proposal_not_found" });
+  if
+
 
 
 // Start the server
