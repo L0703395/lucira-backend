@@ -170,6 +170,7 @@ app.post("/v1/plugins/propose", requireOwnerAuth, (req, res) => {
   });
 });
 // =========================
+// =========================
 // Plugin moderation (approve / reject)
 // =========================
 
@@ -183,7 +184,58 @@ app.post("/v1/plugins/approve", requireOwnerAuth, (req, res) => {
   const { proposal_id, note } = req.body || {};
   const p = findProposal(proposal_id);
   if (!p) return res.status(404).json({ error: "proposal_not_found" });
-  if
+  if (p.status === "APPROVED") return res.status(409).json({ error: "already_approved" });
+
+  p.status = "APPROVED";
+  p.approved_at = new Date().toISOString();
+  if (note) p.approval_note = note;
+
+  // Vault log
+  const vaultEntry = {
+    id: `vault_${vaultEntries.length + 1}`,
+    ts: new Date().toISOString(),
+    type: "PLUGIN_APPROVAL",
+    data: { proposal_id: p.id, plugin_id: p.plugin_id, note: note || null }
+  };
+  vaultEntries.push(vaultEntry);
+  console.log("📜 Vault entry added:", vaultEntry);
+
+  return res.status(202).json({
+    status: "approved",
+    proposal_id: p.id,
+    plugin_id: p.plugin_id,
+    vault_entry_id: vaultEntry.id
+  });
+});
+
+// Reject
+app.post("/v1/plugins/reject", requireOwnerAuth, (req, res) => {
+  const { proposal_id, reason } = req.body || {};
+  const p = findProposal(proposal_id);
+  if (!p) return res.status(404).json({ error: "proposal_not_found" });
+  if (p.status === "REJECTED") return res.status(409).json({ error: "already_rejected" });
+
+  p.status = "REJECTED";
+  p.rejected_at = new Date().toISOString();
+  p.reject_reason = reason || "unspecified";
+
+  // Vault log
+  const vaultEntry = {
+    id: `vault_${vaultEntries.length + 1}`,
+    ts: new Date().toISOString(),
+    type: "PLUGIN_REJECTION",
+    data: { proposal_id: p.id, plugin_id: p.plugin_id, reason: p.reject_reason }
+  };
+  vaultEntries.push(vaultEntry);
+  console.log("📜 Vault entry added:", vaultEntry);
+
+  return res.status(202).json({
+    status: "rejected",
+    proposal_id: p.id,
+    plugin_id: p.plugin_id,
+    vault_entry_id: vaultEntry.id
+  });
+});
 
 
 
