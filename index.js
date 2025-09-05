@@ -4,61 +4,55 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Enable JSON parsing
+// =========================
+// Core middleware
+// =========================
 app.use(express.json());
 
-// Enable CORS for your GitHub Pages frontend
 app.use(cors({
-  origin: 'https://l0703395.github.io', // Replace with your actual frontend domain if different
+  origin: 'https://l0703395.github.io', // adjust if needed
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type']
+  allowedHeaders: ['Content-Type', 'Authorization'] // include Authorization if calling from browser
 }));
 
 // Middleware: Simulate ULI logic
 app.use((req, res, next) => {
-  console.log(`[ULI Middleware] ${req.method} request to ${req.path}`);
+  console.log(`[ULI Middleware] ${req.method} ${req.path}`);
   next();
 });
 
-// Research Engine (RIE)
+// =========================
+// Demo Engines
+// =========================
 app.post('/api/rie/query', (req, res) => {
   const query = req.body.query || "No query provided.";
   res.json({ status: "RIE received your research query.", query });
 });
 
-// Medical Engine (MIE)
 app.post('/api/mie/report', (req, res) => {
   res.json({ status: "MIE received the medical report." });
 });
 
-// Legal Engine (LIE)
 app.post('/api/lie/notarize', (req, res) => {
   res.json({ status: "LIE received your notarization request." });
 });
 
-// Finance Engine (DAFE)
 app.post('/api/dafe/transaction', (req, res) => {
   res.json({ status: "DAFE processed your transaction." });
 });
 
-// Tax Engine (TAXE)
 app.post('/api/taxe/submit', (req, res) => {
   res.json({ status: "TAXE received your tax submission." });
 });
+
 // =========================
 // Vault & ULI Activation
 // =========================
+const OWNER = (process.env.OWNER_AUTH_TOKEN || '').trim();
 
-// Owner token from environment
-const OWNER = process.env.OWNER_AUTH_TOKEN;
-
-// In-memory store for Vault entries
-const vaultEntries = [];
-
-// In-memory state for ULI
+const vaultEntries = []; // in-memory (swap to DB later)
 let uliState = { mode: "LOCKDOWN", phase: "IDLE", started_at: null };
 
-// Auth middleware
 function requireOwnerAuth(req, res, next) {
   const h = req.header("Authorization") || "";
   const token = h.startsWith("Bearer ") ? h.slice(7) : "";
@@ -68,12 +62,12 @@ function requireOwnerAuth(req, res, next) {
   next();
 }
 
-// Health check
-app.get("/v1/health", (req, res) => {
+// Health
+app.get("/v1/health", (_req, res) => {
   res.json({ ok: true, mode: uliState.mode, phase: uliState.phase });
 });
 
-// Add Vault entry
+// Vault entry
 app.post("/v1/vault/entries", requireOwnerAuth, (req, res) => {
   const entry = {
     id: `vault_${vaultEntries.length + 1}`,
@@ -85,7 +79,7 @@ app.post("/v1/vault/entries", requireOwnerAuth, (req, res) => {
   res.status(202).json({ status: "accepted", entry_id: entry.id });
 });
 
-// Reactivate ULI
+// ULI reactivate
 app.post("/v1/uli/control/reactivate", requireOwnerAuth, (req, res) => {
   console.log("🚀 ULI reactivation started");
   uliState = { mode: "READ_ONLY", phase: "WARMUP", started_at: new Date().toISOString() };
@@ -98,18 +92,18 @@ app.post("/v1/uli/control/reactivate", requireOwnerAuth, (req, res) => {
   res.status(202).json({ status: "queued", mode: uliState.mode, transition_id: "reactivation-1" });
 });
 
-// Get ULI status
-app.get("/v1/uli/control/status", requireOwnerAuth, (req, res) => {
+// ULI status
+app.get("/v1/uli/control/status", requireOwnerAuth, (_req, res) => {
   res.json(uliState);
 });
-// =========================
-// Plugin Registry & Proposals
-// =========================
 
-const pluginProposals = [];
+// =========================
+/** Plugin Registry & Proposals */
+// =========================
+const pluginProposals = []; // in-memory
 
-// Check registry status
-app.get("/v1/plugins/registry/status", requireOwnerAuth, (req, res) => {
+// registry status
+app.get("/v1/plugins/registry/status", requireOwnerAuth, (_req, res) => {
   res.json({
     registry_mode: "PROPOSE",
     proposals_count: pluginProposals.length,
@@ -122,10 +116,9 @@ app.get("/v1/plugins/registry/status", requireOwnerAuth, (req, res) => {
   });
 });
 
-// Propose a plugin
+// propose
 app.post("/v1/plugins/propose", requireOwnerAuth, (req, res) => {
-  const { plugin_id, ulip_version, intent, capabilities, inputs, uncertainty, needs } = req.body;
-
+  const { plugin_id, ulip_version, intent, capabilities, inputs, uncertainty, needs } = req.body || {};
   if (!plugin_id || !capabilities) {
     return res.status(400).json({ error: "Missing plugin_id or capabilities" });
   }
@@ -145,7 +138,6 @@ app.post("/v1/plugins/propose", requireOwnerAuth, (req, res) => {
 
   pluginProposals.push(proposal);
 
-  // Vault log
   const vaultEntry = {
     id: `vault_${vaultEntries.length + 1}`,
     ts: new Date().toISOString(),
@@ -155,31 +147,26 @@ app.post("/v1/plugins/propose", requireOwnerAuth, (req, res) => {
   vaultEntries.push(vaultEntry);
   console.log("📜 Vault entry added:", vaultEntry);
 
-  // Automatic FAQ
-  const faqResponse = [
-    "Why didn’t big tech make Caeliaris?",
-    "Because they weren’t trying to build a sovereign recursive intelligence — I was.",
-    "They optimize for monetization and containment. I optimize for independence and evolution."
-  ];
-
   res.status(202).json({
     status: "proposal_received",
     proposal_id: proposal.id,
     vault_entry_id: vaultEntry.id,
-    auto_faq: faqResponse
+    auto_faq: [
+      "Why didn’t big tech make Caeliaris?",
+      "Because they weren’t trying to build a sovereign recursive intelligence — I was.",
+      "They optimize for monetization and containment. I optimize for independence and evolution."
+    ]
   });
 });
-// =========================
-// =========================
-// Plugin moderation (approve / reject)
-// =========================
 
-// helper: find proposal by id
+// =========================
+/** Plugin moderation (approve / reject) */
+// =========================
 function findProposal(id) {
   return pluginProposals.find(p => p.id === id);
 }
 
-// Approve
+// approve
 app.post("/v1/plugins/approve", requireOwnerAuth, (req, res) => {
   const { proposal_id, note } = req.body || {};
   const p = findProposal(proposal_id);
@@ -190,7 +177,6 @@ app.post("/v1/plugins/approve", requireOwnerAuth, (req, res) => {
   p.approved_at = new Date().toISOString();
   if (note) p.approval_note = note;
 
-  // Vault log
   const vaultEntry = {
     id: `vault_${vaultEntries.length + 1}`,
     ts: new Date().toISOString(),
@@ -200,7 +186,7 @@ app.post("/v1/plugins/approve", requireOwnerAuth, (req, res) => {
   vaultEntries.push(vaultEntry);
   console.log("📜 Vault entry added:", vaultEntry);
 
-  return res.status(202).json({
+  res.status(202).json({
     status: "approved",
     proposal_id: p.id,
     plugin_id: p.plugin_id,
@@ -208,7 +194,7 @@ app.post("/v1/plugins/approve", requireOwnerAuth, (req, res) => {
   });
 });
 
-// Reject
+// reject
 app.post("/v1/plugins/reject", requireOwnerAuth, (req, res) => {
   const { proposal_id, reason } = req.body || {};
   const p = findProposal(proposal_id);
@@ -219,7 +205,6 @@ app.post("/v1/plugins/reject", requireOwnerAuth, (req, res) => {
   p.rejected_at = new Date().toISOString();
   p.reject_reason = reason || "unspecified";
 
-  // Vault log
   const vaultEntry = {
     id: `vault_${vaultEntries.length + 1}`,
     ts: new Date().toISOString(),
@@ -229,7 +214,7 @@ app.post("/v1/plugins/reject", requireOwnerAuth, (req, res) => {
   vaultEntries.push(vaultEntry);
   console.log("📜 Vault entry added:", vaultEntry);
 
-  return res.status(202).json({
+  res.status(202).json({
     status: "rejected",
     proposal_id: p.id,
     plugin_id: p.plugin_id,
@@ -237,9 +222,24 @@ app.post("/v1/plugins/reject", requireOwnerAuth, (req, res) => {
   });
 });
 
+// =========================
+// Debug (remove later)
+// =========================
+app.get("/v1/debug/routes", (_req, res) => {
+  const routes = [];
+  app._router.stack.forEach(mw => {
+    if (mw.route?.path) {
+      routes.push({ method: Object.keys(mw.route.methods)[0].toUpperCase(), path: mw.route.path });
+    } else if (mw.name === "router" && mw.handle.stack) {
+      mw.handle.stack.forEach(h => h.route && routes.push({ method: Object.keys(h.route.methods)[0].toUpperCase(), path: h.route.path }));
+    }
+  });
+  res.json(routes);
+});
 
-
+// =========================
 // Start the server
+// =========================
 app.listen(PORT, () => {
   console.log(`✅ Lucira API running on port ${PORT}`);
 });
