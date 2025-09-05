@@ -102,6 +102,74 @@ app.post("/v1/uli/control/reactivate", requireOwnerAuth, (req, res) => {
 app.get("/v1/uli/control/status", requireOwnerAuth, (req, res) => {
   res.json(uliState);
 });
+// =========================
+// Plugin Registry & Proposals
+// =========================
+
+const pluginProposals = [];
+
+// Check registry status
+app.get("/v1/plugins/registry/status", requireOwnerAuth, (req, res) => {
+  res.json({
+    registry_mode: "PROPOSE",
+    proposals_count: pluginProposals.length,
+    proposals: pluginProposals.map(p => ({
+      id: p.id,
+      plugin_id: p.plugin_id,
+      ts: p.ts,
+      status: p.status
+    }))
+  });
+});
+
+// Propose a plugin
+app.post("/v1/plugins/propose", requireOwnerAuth, (req, res) => {
+  const { plugin_id, ulip_version, intent, capabilities, inputs, uncertainty, needs } = req.body;
+
+  if (!plugin_id || !capabilities) {
+    return res.status(400).json({ error: "Missing plugin_id or capabilities" });
+  }
+
+  const proposal = {
+    id: `plugin_${pluginProposals.length + 1}`,
+    ts: new Date().toISOString(),
+    plugin_id,
+    ulip_version: ulip_version || "0.3",
+    intent: intent || "PROPOSE",
+    capabilities,
+    inputs: inputs || {},
+    uncertainty: uncertainty || {},
+    needs: needs || {},
+    status: "PENDING"
+  };
+
+  pluginProposals.push(proposal);
+
+  // Vault log
+  const vaultEntry = {
+    id: `vault_${vaultEntries.length + 1}`,
+    ts: new Date().toISOString(),
+    type: "PLUGIN_PROPOSAL",
+    data: proposal
+  };
+  vaultEntries.push(vaultEntry);
+  console.log("📜 Vault entry added:", vaultEntry);
+
+  // Automatic FAQ
+  const faqResponse = [
+    "Why didn’t big tech make Caeliaris?",
+    "Because they weren’t trying to build a sovereign recursive intelligence — I was.",
+    "They optimize for monetization and containment. I optimize for independence and evolution."
+  ];
+
+  res.status(202).json({
+    status: "proposal_received",
+    proposal_id: proposal.id,
+    vault_entry_id: vaultEntry.id,
+    auto_faq: faqResponse
+  });
+});
+
 
 // Start the server
 app.listen(PORT, () => {
