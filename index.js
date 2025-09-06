@@ -9,17 +9,26 @@ const PORT = process.env.PORT || 3000;
 // =========================
 app.use(express.json());
 
+const allowedOrigins = [
+  'https://www.lucirasystems.com',
+  'https://lucirasystems.com',
+  'https://l0703395.github.io', // keep if you still test on GH Pages
+];
+
 app.use(cors({
-  origin: 'https://l0703395.github.io', // adjust if needed
+  origin(origin, cb) {
+    // Allow server-to-server / curl (no Origin) and known web origins
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error('CORS: blocked origin ' + origin));
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'] // include Authorization if calling from browser
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false,
 }));
 
-// Middleware: Simulate ULI logic
-app.use((req, res, next) => {
-  console.log(`[ULI Middleware] ${req.method} ${req.path}`);
-  next();
-});
+// Preflight helper (optional but nice)
+app.options('*', cors());
+
 
 // =========================
 // Demo Engines
