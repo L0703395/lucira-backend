@@ -10,6 +10,8 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 const allowedOrigins = [
+  'https://www.caeliaris.com',
+  'https://caeliaris.com',
   'https://www.lucirasystems.com',
   'https://lucirasystems.com',
   'https://l0703395.github.io', // keep if you still test on GH Pages
